@@ -1,0 +1,12 @@
+set(CMAKE_HIP_RUNTIME_LIBRARY SHARED)
+set(GPU_ARCHITECTURE_SUPPORT "gfx942")
+
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Rpass-analysis=kernel-resource-usage -fgpu-rdc --hip-link -g")
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Profile")
+    set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Rpass-analysis=kernel-resource-usage -lineinfo -fgpu-rdc --hip-link")
+elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} -Rpass-analysis=kernel-resource-usage -fgpu-rdc --hip-link")
+else()
+    message(FATAL_ERROR "Invalid CMAKE_BUILD_TYPE")
+endif()
