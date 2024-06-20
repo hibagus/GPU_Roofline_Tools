@@ -81,6 +81,11 @@ include(cmake/ExternalLibs.cmake)
 # add project include dirs for everything
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+# include ROCM directory
+#if("${GPU_RUNTIME}" STREQUAL "HIP")
+#    include_directories(${ROCM_ROOT}/include)
+#endif()
+
 # add project library
 set(PROJECT_AMD_BENCH "amdbenchlib" )
 
