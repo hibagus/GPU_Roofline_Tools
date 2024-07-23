@@ -16,4 +16,7 @@ class metrics
   uint64_t   max_clock;    // Max clock cycle across all wavefronts
   uint64_t   min_clock;    // Min clock cycle across all wavefronts
   double     stdev_clock;  // Standard deviation across all wavefronts
+
+  void print_csv();
+  static void print_csv_header();
 };

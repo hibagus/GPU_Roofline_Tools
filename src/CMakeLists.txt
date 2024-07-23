@@ -14,6 +14,7 @@ macro (add_sources sourcelist)
 endmacro()
 
 # Iterate through source files
+add_subdirectory(utils)
 add_subdirectory(kernel)
 add_subdirectory(launcher)
 
