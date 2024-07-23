@@ -4,34 +4,34 @@
 #include <GPU_Roofline_Tools/kernel/rocm/add.hip.h>
 #include <GPU_Roofline_Tools/kernel/rocm/mul.hip.h>
 #include <GPU_Roofline_Tools/kernel/rocm/fma.hip.h>
-#include <GPU_Roofline_Tools/launcher/rocm/kernel_launch.hip.h>
+#include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_vector.hip.h>
 #include <GPU_Roofline_Tools/utils/rocm/hipcheck.hip.h>
 #include <GPU_Roofline_Tools/utils/rocm/hipinfo.hip.h>
 #include <GPU_Roofline_Tools/utils/common/optype.h>
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
 
-metrics kernel_launch_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
 {
-    return kernel_launch<hip_bfloat16>(n_wavefront, n_workgroup, n_loop, op);
+    return kernel_launch_vector<hip_bfloat16>(n_wavefront, n_workgroup, n_loop, op);
 }
 
-metrics kernel_launch_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
 {
-    return kernel_launch<_Float16>(n_wavefront, n_workgroup, n_loop, op);
+    return kernel_launch_vector<_Float16>(n_wavefront, n_workgroup, n_loop, op);
 }
 
-metrics kernel_launch_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
 {
-    return kernel_launch<float>(n_wavefront, n_workgroup, n_loop, op);
+    return kernel_launch_vector<float>(n_wavefront, n_workgroup, n_loop, op);
 }
 
-metrics kernel_launch_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
 {
-    return kernel_launch<double>(n_wavefront, n_workgroup, n_loop, op);
+    return kernel_launch_vector<double>(n_wavefront, n_workgroup, n_loop, op);
 }
 
 template<typename TCompute>
-inline metrics kernel_launch(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
+inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t n_loop, optype op)
 {
     // n_wavefront: number of wavefront (warp) per workgroup (block)
     //              this means number of thread per workgroup will be n_wavefront * wf_sz
