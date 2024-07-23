@@ -6,5 +6,7 @@ enum optype
     V_MUL,
     V_FMA3, // A = A*B + C
     V_FMA2, // A = A*constant + B
-    V_FMA1  // A = A*constant + A
+    V_FMA1, // A = A*constant + A
+    M_WMMA, // Matrix Multiplication using rocWMMA 
+    M_BLAS  // Matrix Multiplication using rocBLAS
 };
