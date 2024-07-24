@@ -15,15 +15,22 @@ __global__ void fma(TCompute *buf_A, TCompute *buf_B, TCompute *buf_C, uint32_t 
     uint64_t start_time;
     uint64_t end_time;
 
+    // Load operand from Memory to Register
+    TCompute a = buf_A[thread_id];
+    TCompute b = buf_B[thread_id];
+    TCompute c = buf_C[thread_id];
+
+    // Compute
     start_time = clock64();
-
     #pragma unroll
-    for(uint32_t iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < n_loop; iter++)
     {
-        buf_A[thread_id] = buf_A[thread_id] * buf_B[thread_id] + buf_C[thread_id];
+        a = a * b + c;
     }
-
     end_time = clock64();
+
+    // Store back the result to memory
+    buf_A[thread_id] = a;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 }
@@ -42,15 +49,21 @@ __global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint32_t
     uint64_t start_time;
     uint64_t end_time;
 
+    // Load operand from Memory to Register
+    TCompute a = buf_A[thread_id];
+    TCompute c = buf_C[thread_id];
+
+    // Compute
     start_time = clock64();
-
     #pragma unroll
-    for(uint32_t iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < n_loop; iter++)
     {
-        buf_A[thread_id] = buf_A[thread_id] * B + buf_C[thread_id];
+        a = a * B + c;
     }
-
     end_time = clock64();
+
+    // Store back the result to memory
+    buf_A[thread_id] = a;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 }
@@ -69,15 +82,19 @@ __global__ void fma(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t
     uint64_t start_time;
     uint64_t end_time;
 
+    // Load operand from Memory to Register
+    TCompute a = buf_A[thread_id];
+
     start_time = clock64();
-
     #pragma unroll
-    for(uint32_t iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < n_loop; iter++)
     {
-        buf_A[thread_id] = buf_A[thread_id] * B + buf_A[thread_id];
+        a = a * B + a;
     }
-
     end_time = clock64();
+
+    // Store back the result to memory
+    buf_A[thread_id] = a;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 }

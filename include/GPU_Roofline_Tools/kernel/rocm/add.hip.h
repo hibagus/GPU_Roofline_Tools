@@ -16,15 +16,21 @@ __global__ void add(TCompute *buf_A, TCompute *buf_B, uint32_t n_loop, uint64_t 
     uint64_t start_time;
     uint64_t end_time;
 
+    // Load operand from Memory to Register
+    TCompute a = buf_A[thread_id];
+    TCompute b = buf_B[thread_id];
+    
+    // Compute
     start_time = clock64();
-
     #pragma unroll
-    for(uint32_t iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < n_loop; iter++)
     {
-        buf_A[thread_id] = buf_A[thread_id] + buf_B[thread_id];
+        a = a + b;
     }
-
     end_time = clock64();
+
+    // Store back the result to memory
+    buf_A[thread_id] = a;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 

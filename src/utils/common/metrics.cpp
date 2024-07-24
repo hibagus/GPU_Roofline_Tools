@@ -16,7 +16,7 @@ void metrics::print_csv()
     << avg_clock   <<", "
     << max_clock   <<", "
     << min_clock   <<", "
-    << stdev_clock <<", "
+    << stdev_clock <<" "
     << std::endl; 
 }
 
@@ -35,6 +35,6 @@ void metrics::print_csv_header()
     << "avg_clock"   <<", "
     << "max_clock"   <<", "
     << "min_clock"   <<", "
-    << "stdev_clock" <<", "
+    << "stdev_clock" <<" "
     << std::endl;     
 }
