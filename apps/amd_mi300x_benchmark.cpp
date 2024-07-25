@@ -179,6 +179,7 @@ int main(int argc, char *argv[])
     // Operations
     optype operations;
     if       (str_operations=="V_ADD") {operations=V_ADD;}
+    else if  (str_operations=="V_ADD2"){operations=V_ADD2;}
     else if  (str_operations=="V_MUL") {operations=V_MUL;}
     else if  (str_operations=="V_FMA3"){operations=V_FMA3;}
     else if  (str_operations=="V_FMA2"){operations=V_FMA2;}
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
            {
                 metrics run_metrics;
                 // Kernel launch
-                if (operations==V_ADD || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
+                if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
                 {
                      if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}
                      else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}

@@ -3,6 +3,7 @@
 enum optype 
 {
     V_ADD,
+    V_ADD2, // Packed Add A=A+B, C=C+B
     V_MUL,
     V_FMA3, // A = A*B + C
     V_FMA2, // A = A*constant + B

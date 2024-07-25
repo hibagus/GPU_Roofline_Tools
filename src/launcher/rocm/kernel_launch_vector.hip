@@ -35,7 +35,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     // n_wavefront: number of wavefront (warp) per workgroup (block)
     //              this means number of thread per workgroup will be n_wavefront * dev_wf_sz
     TCompute *dev_buf_A, *dev_buf_B, *dev_buf_C;
-    const TCompute constant = (TCompute) 1.00;
+    const TCompute constant = (TCompute) 0.0000000001;
     uint64_t *n_clockCount, *dev_n_clockCount;
 
     // Calculate problem size (basically number of threads)
@@ -65,7 +65,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
         hipErrchk(hipMalloc((void**)&dev_buf_A, problem_size * sizeof(TCompute)));
         hipErrchk(hipMalloc((void**)&dev_buf_B, problem_size * sizeof(TCompute)));
     }
-    else if (op == V_FMA3)
+    else if (op == V_ADD2 || op == V_FMA3)
     {
         hipErrchk(hipMalloc((void**)&dev_buf_A, problem_size * sizeof(TCompute)));
         hipErrchk(hipMalloc((void**)&dev_buf_B, problem_size * sizeof(TCompute)));
@@ -77,6 +77,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     if      (op == V_MUL)   {hipLaunchKernelGGL(mul<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, n_loop, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_FMA1)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, n_loop, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_ADD)   {hipLaunchKernelGGL(add<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, n_loop, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_ADD2)  {hipLaunchKernelGGL(add<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, n_loop, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_FMA2)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_buf_B, n_loop, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_FMA3)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, n_loop, dev_n_clockCount, dev_wf_sz);}
     hipErrchk(hipEventRecord(stop,0));
@@ -124,7 +125,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
         hipErrchk(hipFree(dev_buf_A));
         hipErrchk(hipFree(dev_buf_B));
     }
-    else if (op == V_FMA3)
+    else if (op == V_ADD2 || op == V_FMA3)
     {
         hipErrchk(hipFree(dev_buf_A));
         hipErrchk(hipFree(dev_buf_B));
@@ -148,6 +149,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     if      (op == V_MUL)   {run_metrics.n_flops = (uint64_t) 1*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*n_loop;}
     else if (op == V_FMA1)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*n_loop;}
     else if (op == V_ADD)   {run_metrics.n_flops = (uint64_t) 1*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*n_loop;}
+    else if (op == V_ADD2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*n_loop;}
     else if (op == V_FMA2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*n_loop;}
     else if (op == V_FMA3)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*n_loop;}
     return run_metrics;
