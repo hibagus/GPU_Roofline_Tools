@@ -23,7 +23,7 @@ __global__ void mul(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t
     #pragma unroll
     for(int iter=0; iter < n_loop; iter++)
     {
-        a = a * B;
+        a = static_cast<TCompute>(a * B);
     }
     end_time = clock64();
 

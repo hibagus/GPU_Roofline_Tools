@@ -25,12 +25,16 @@ __global__ void fma(TCompute *buf_A, TCompute *buf_B, TCompute *buf_C, uint32_t 
     #pragma unroll
     for(int iter=0; iter < n_loop; iter++)
     {
-        a = a * b + c;
+        a = static_cast<TCompute>(a * 0.000000001 + 0.000000001);
+        b = static_cast<TCompute>(b * 0.000000001 + 0.000000001);
+        c = static_cast<TCompute>(c * 0.000000001 + 0.000000001);
     }
     end_time = clock64();
 
     // Store back the result to memory
     buf_A[thread_id] = a;
+    buf_A[thread_id] = b;
+    buf_A[thread_id] = c;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 }
@@ -58,7 +62,7 @@ __global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint32_t
     #pragma unroll
     for(int iter=0; iter < n_loop; iter++)
     {
-        a = a * B + c;
+        a = static_cast<TCompute>(a * B + c);
     }
     end_time = clock64();
 
@@ -89,7 +93,7 @@ __global__ void fma(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t
     #pragma unroll
     for(int iter=0; iter < n_loop; iter++)
     {
-        a = a * B + a;
+        a = static_cast<TCompute>(a * B + a);
     }
     end_time = clock64();
 
