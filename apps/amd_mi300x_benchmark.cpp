@@ -24,11 +24,6 @@ int main(int argc, char *argv[])
             .scan<'i', int>()
             .default_value(0)
             .metavar("DEVICE");
-    program.add_argument("--iterations")
-            .help("Number of iterations. Useful to eliminate any overheads since the operations of interest inside the kernel are repeated multiple times.")
-            .scan<'i', int>()
-            .default_value(1)
-            .metavar("iter");
     program.add_argument("--operations")
             .help("Select operation types: V_ADD, V_MUL, V_FMA3, V_FMA2, V_FMA1, M_WMMA, M_BLAS")
             .default_value(std::string("V_FMA3"))
@@ -41,21 +36,15 @@ int main(int argc, char *argv[])
             .metavar("v_dtype");
 
     // Matrix Execution
-    program.add_argument("--matrix-ti-type")
-            .help("Select matrix input data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
+    program.add_argument("--matrix-mult-type")
+            .help("Select matrix multiplication data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
             .default_value(std::string("fp16"))
-            .metavar("m_titype");
+            .metavar("m_multype");
 
-    program.add_argument("--matrix-to-type")
-            .help("Select matrix output data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
+    program.add_argument("--matrix-accum-type")
+            .help("Select matrix accumulation data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
             .default_value(std::string("fp16"))
-            .metavar("m_totype");
-
-    program.add_argument("--matrix-tc-type")
-            .help("Select matrix computation data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
-            .default_value(std::string("fp16"))
-            .metavar("m_tctype");
-
+            .metavar("m_acctype");
     
 
 
@@ -110,13 +99,11 @@ int main(int argc, char *argv[])
 
     // Operation Type
     std::string str_operations  = program.get<std::string>("--operations");
-    // Iteration
-    int num_iterations = program.get<int>("--iterations");
+
     // Data Type
-    std::string str_v_dtype  = program.get<std::string>("--vector-data-type");
-    std::string str_m_titype = program.get<std::string>("--matrix-ti-type");
-    std::string str_m_totype = program.get<std::string>("--matrix-to-type");
-    std::string str_m_tctype = program.get<std::string>("--matrix-tc-type");
+    std::string str_v_dtype   = program.get<std::string>("--vector-data-type");
+    std::string str_m_multype = program.get<std::string>("--matrix-mult-type");
+    std::string str_m_acctype = program.get<std::string>("--matrix-accum-type");
     
     // Workgroup Control
     int min_workgroup  = program.get<int>("--min-workgroup");
@@ -144,9 +131,8 @@ int main(int argc, char *argv[])
     if (step_wavefront<1){std::cerr << "[ERR!] STEP_WF must be positive number!" << std::endl; exit(1);}
 
     ptype v_dtype;
-    ptype m_titype;
-    ptype m_totype;
-    ptype m_tctype;
+    ptype m_multype;
+    ptype m_acctype;
 
     // Data Type
     if       (str_v_dtype=="fp64"){v_dtype=FP64;}
@@ -155,26 +141,19 @@ int main(int argc, char *argv[])
     else if  (str_v_dtype=="bf16"){v_dtype=BF16;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported vector data type!" << std::endl; exit(1);}
 
-    if       (str_m_titype=="fp64"){m_titype=FP64;}
-    else if  (str_m_titype=="fp32"){m_titype=FP32;}
-    else if  (str_m_titype=="fp16"){m_titype=FP16;}
-    else if  (str_m_titype=="bf16"){m_titype=BF16;}
-    else if  (str_m_titype=="int8"){m_titype=INT8;}
-    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported input matrix data type!" << std::endl; exit(1);}
+    if       (str_m_multype=="fp64"){m_multype=FP64;}
+    else if  (str_m_multype=="fp32"){m_multype=FP32;}
+    else if  (str_m_multype=="fp16"){m_multype=FP16;}
+    else if  (str_m_multype=="bf16"){m_multype=BF16;}
+    else if  (str_m_multype=="int8"){m_multype=INT8;}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported multiplication matrix data type!" << std::endl; exit(1);}
 
-    if       (str_m_totype=="fp64"){m_totype=FP64;}
-    else if  (str_m_totype=="fp32"){m_totype=FP32;}
-    else if  (str_m_totype=="fp16"){m_totype=FP16;}
-    else if  (str_m_totype=="bf16"){m_totype=BF16;}
-    else if  (str_m_totype=="int8"){m_totype=INT8;}
-    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported output matrix data type!" << std::endl; exit(1);}
-
-    if       (str_m_tctype=="fp64"){m_tctype=FP64;}
-    else if  (str_m_tctype=="fp32"){m_tctype=FP32;}
-    else if  (str_m_tctype=="fp16"){m_tctype=FP16;}
-    else if  (str_m_tctype=="bf16"){m_tctype=BF16;}
-    else if  (str_m_tctype=="int8"){m_tctype=INT8;}
-    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported computation matrix data type!" << std::endl; exit(1);}
+    if       (str_m_acctype=="fp64"){m_acctype=FP64;}
+    else if  (str_m_acctype=="fp32"){m_acctype=FP32;}
+    else if  (str_m_acctype=="fp16"){m_acctype=FP16;}
+    else if  (str_m_acctype=="bf16"){m_acctype=BF16;}
+    else if  (str_m_acctype=="int8"){m_acctype=INT8;}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported accumulation matrix data type!" << std::endl; exit(1);}
 
     // Operations
     optype operations;
@@ -210,10 +189,10 @@ int main(int argc, char *argv[])
                 // Kernel launch
                 if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
                 {
-                     if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}
-                     else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}
-                     else if(v_dtype==FP16){run_metrics=kernel_launch_vector_fp16(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}
-                     else if(v_dtype==BF16){run_metrics=kernel_launch_vector_bf16(num_wf, num_wg, dev_wf_sz, num_iterations, operations);}
+                     if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, operations);}
+                     else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, operations);}
+                     else if(v_dtype==FP16){run_metrics=kernel_launch_vector_fp16(num_wf, num_wg, dev_wf_sz, operations);}
+                     else if(v_dtype==BF16){run_metrics=kernel_launch_vector_bf16(num_wf, num_wg, dev_wf_sz, operations);}
                 }
                 else if (operations==M_WMMA)
                 {
@@ -235,7 +214,7 @@ int main(int argc, char *argv[])
     }
     else if (operations==M_WMMA)
     {
-        std::cout << "Result " << str_operations << " with " << str_m_titype <<"/"<< str_m_totype <<"/"<< str_m_tctype << std::endl;
+        std::cout << "Result " << str_operations << " with " << str_m_multype <<"/"<< str_m_acctype << std::endl;
     }
     else if (operations==M_BLAS)
     {

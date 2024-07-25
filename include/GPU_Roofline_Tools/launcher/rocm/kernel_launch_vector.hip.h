@@ -3,9 +3,9 @@
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
 
 template<typename TCompute>
-inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op);
+inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op);
 
-metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op);
-metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op);
-metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op);
-metrics kernel_launch_vector_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op);
+metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op);
+metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op);
+metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op);
+metrics kernel_launch_vector_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op);

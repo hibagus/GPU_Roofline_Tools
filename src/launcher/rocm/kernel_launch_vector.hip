@@ -8,29 +8,30 @@
 #include <GPU_Roofline_Tools/utils/rocm/hipcheck.hip.h>
 #include <GPU_Roofline_Tools/utils/common/optype.h>
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
+#include <GPU_Roofline_Tools/utils/common/global.h>
 
-metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
-    return kernel_launch_vector<hip_bfloat16>(n_wavefront, n_workgroup, dev_wf_sz, n_loop, op);
+    return kernel_launch_vector<hip_bfloat16>(n_wavefront, n_workgroup, dev_wf_sz, op);
 }
 
-metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
-    return kernel_launch_vector<_Float16>(n_wavefront, n_workgroup, dev_wf_sz, n_loop, op);
+    return kernel_launch_vector<_Float16>(n_wavefront, n_workgroup, dev_wf_sz, op);
 }
 
-metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
-    return kernel_launch_vector<float>(n_wavefront, n_workgroup, dev_wf_sz, n_loop, op);
+    return kernel_launch_vector<float>(n_wavefront, n_workgroup, dev_wf_sz, op);
 }
 
-metrics kernel_launch_vector_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op)
+metrics kernel_launch_vector_fp64(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
-    return kernel_launch_vector<double>(n_wavefront, n_workgroup, dev_wf_sz, n_loop, op);
+    return kernel_launch_vector<double>(n_wavefront, n_workgroup, dev_wf_sz, op);
 }
 
 template<typename TCompute>
-inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, uint32_t n_loop, optype op)
+inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
     // n_wavefront: number of wavefront (warp) per workgroup (block)
     //              this means number of thread per workgroup will be n_wavefront * dev_wf_sz
@@ -74,12 +75,12 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
 
     // Launching Kernels
     hipErrchk(hipEventRecord(start,0));
-    if      (op == V_MUL)   {hipLaunchKernelGGL(mul<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, n_loop, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_FMA1)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, n_loop, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_ADD)   {hipLaunchKernelGGL(add<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, n_loop, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_ADD2)  {hipLaunchKernelGGL(add<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, n_loop, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_FMA2)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_buf_B, n_loop, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_FMA3)  {hipLaunchKernelGGL(fma<TCompute>, dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, n_loop, dev_n_clockCount, dev_wf_sz);}
+    if      (op == V_MUL)   {hipLaunchKernelGGL(HIP_KERNEL_NAME(mul<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_FMA1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_ADD)   {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_ADD2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_FMA2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_FMA3)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, dev_n_clockCount, dev_wf_sz);}
     hipErrchk(hipEventRecord(stop,0));
     hipErrchk(hipDeviceSynchronize());
 
@@ -133,7 +134,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     }
 
     // Storing the run metrics
-    run_metrics.n_iter      = n_loop;
+    run_metrics.n_iter      = NUM_LOOPS;
     run_metrics.n_thread    = problem_size;
     run_metrics.n_wg        = n_workgroup;
     run_metrics.n_wf        = n_wavefront;
@@ -146,11 +147,11 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     run_metrics.min_clock   = min_clock;
     run_metrics.stdev_clock = stdev_clock;
 
-    if      (op == V_MUL)   {run_metrics.n_flops = (uint64_t) 1*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*n_loop;}
-    else if (op == V_FMA1)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*n_loop;}
-    else if (op == V_ADD)   {run_metrics.n_flops = (uint64_t) 1*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*n_loop;}
-    else if (op == V_ADD2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*n_loop;}
-    else if (op == V_FMA2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*n_loop;}
-    else if (op == V_FMA3)  {run_metrics.n_flops = (uint64_t) 2*problem_size*n_loop; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*n_loop;}
+    if      (op == V_MUL)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    else if (op == V_FMA1)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    else if (op == V_ADD)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    else if (op == V_ADD2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    else if (op == V_FMA2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    else if (op == V_FMA3)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*NUM_LOOPS;}
     return run_metrics;
 }

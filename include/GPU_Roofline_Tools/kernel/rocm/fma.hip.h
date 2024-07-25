@@ -2,7 +2,7 @@
 #include <hip/hip_runtime.h>
 
 template<typename TCompute>
-__global__ void fma(TCompute *buf_A, TCompute *buf_B, TCompute *buf_C, uint32_t n_loop, uint64_t *dev_n_clockCount, uint32_t wf_sz)
+__global__ void fma(TCompute *buf_A, TCompute *buf_B, TCompute *buf_C, uint64_t *dev_n_clockCount, uint32_t wf_sz)
 {
     // Global Index (NDRange-level)
     const uint32_t thread_id     = hipBlockDim_x * hipBlockIdx_x + hipThreadIdx_x;
@@ -23,24 +23,20 @@ __global__ void fma(TCompute *buf_A, TCompute *buf_B, TCompute *buf_C, uint32_t 
     // Compute
     start_time = clock64();
     #pragma unroll
-    for(int iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < NUM_LOOPS; iter++)
     {
-        a = static_cast<TCompute>(a * 0.000000001 + 0.000000001);
-        b = static_cast<TCompute>(b * 0.000000001 + 0.000000001);
-        c = static_cast<TCompute>(c * 0.000000001 + 0.000000001);
+        a = a * b + c;
     }
     end_time = clock64();
 
     // Store back the result to memory
     buf_A[thread_id] = a;
-    buf_A[thread_id] = b;
-    buf_A[thread_id] = c;
 
     if(lane_id_x==0){dev_n_clockCount[wavefront_id] = end_time-start_time;}
 }
 
 template<typename TCompute>
-__global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint32_t n_loop, uint64_t *dev_n_clockCount, uint32_t wf_sz)
+__global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint64_t *dev_n_clockCount, uint32_t wf_sz)
 {
     // Global Index (NDRange-level)
     const uint32_t thread_id     = hipBlockDim_x * hipBlockIdx_x + hipThreadIdx_x;
@@ -60,9 +56,9 @@ __global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint32_t
     // Compute
     start_time = clock64();
     #pragma unroll
-    for(int iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < NUM_LOOPS; iter++)
     {
-        a = static_cast<TCompute>(a * B + c);
+        a = a * B + c;
     }
     end_time = clock64();
 
@@ -73,7 +69,7 @@ __global__ void fma(TCompute *buf_A, const TCompute B, TCompute *buf_C, uint32_t
 }
 
 template<typename TCompute>
-__global__ void fma(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t *dev_n_clockCount, uint32_t wf_sz)
+__global__ void fma(TCompute *buf_A, const TCompute B, uint64_t *dev_n_clockCount, uint32_t wf_sz)
 {
     // Global Index (NDRange-level)
     const uint32_t thread_id     = hipBlockDim_x * hipBlockIdx_x + hipThreadIdx_x;
@@ -91,9 +87,9 @@ __global__ void fma(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t
 
     start_time = clock64();
     #pragma unroll
-    for(int iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < NUM_LOOPS; iter++)
     {
-        a = static_cast<TCompute>(a * B + a);
+        a = a * B + a;
     }
     end_time = clock64();
 

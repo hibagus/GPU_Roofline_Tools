@@ -2,7 +2,7 @@
 #include <hip/hip_runtime.h>
 
 template<typename TCompute>
-__global__ void mul(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t *dev_n_clockCount, uint32_t wf_sz)
+__global__ void mul(TCompute *buf_A, const TCompute B, uint64_t *dev_n_clockCount, uint32_t wf_sz)
 {
     // Global Index (NDRange-level)
     const uint32_t thread_id     = hipBlockDim_x * hipBlockIdx_x + hipThreadIdx_x;
@@ -21,9 +21,9 @@ __global__ void mul(TCompute *buf_A, const TCompute B, uint32_t n_loop, uint64_t
     // Compute
     start_time = clock64();
     #pragma unroll
-    for(int iter=0; iter < n_loop; iter++)
+    for(int iter=0; iter < NUM_LOOPS; iter++)
     {
-        a = static_cast<TCompute>(a * B);
+        a = a * B;
     }
     end_time = clock64();
 
