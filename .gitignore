@@ -3,3 +3,4 @@ bin/*
 libs/*
 runs/outputs/*
 profiler/outputs/*
+monitors/outputs/*
