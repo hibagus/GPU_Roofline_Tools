@@ -12,6 +12,7 @@ class metrics
   uint64_t   n_flops;      // Number of Flops
   uint64_t   n_bytes;      // Number of Bytes
   double     time_ms;      // Elapsed time in ms
+  double     gflop_per_s;  // Performance GFLOP/s
   double     avg_clock;    // Average clock cycle across all wavefronts
   uint64_t   max_clock;    // Max clock cycle across all wavefronts
   uint64_t   min_clock;    // Min clock cycle across all wavefronts
