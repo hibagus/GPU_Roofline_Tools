@@ -1,6 +1,8 @@
 #include <argparse/argparse.hpp>
+#include <ctime>
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_vector.hip.h>
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_device_init.hip.h>
+#include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_wmma.hip.h>
 #include <GPU_Roofline_Tools/utils/common/optype.h>
 #include <GPU_Roofline_Tools/utils/common/ptype.h>
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
@@ -165,7 +167,7 @@ int main(int argc, char *argv[])
     else if  (str_operations=="V_FMA1"){operations=V_FMA1;}
     else if  (str_operations=="M_WMMA"){operations=M_WMMA;}
     else if  (str_operations=="M_BLAS"){operations=M_BLAS;}
-    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported computation matrix data type!" << std::endl; exit(1);}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported operation!" << std::endl; exit(1);}
     
     // For storing the run metrics
     std::vector<metrics> all_metrics;
@@ -176,7 +178,7 @@ int main(int argc, char *argv[])
         // Wavefront Sweep
         for(int num_wf=min_wavefront; num_wf<=max_wavefront; num_wf=num_wf+step_wavefront)
         {
-           std::cout << "[INFO] Running with " << num_wf << " wavefront(s) per workgroup and " << num_wg << " workgroup(s)" << std::endl; 
+           std::cout << "[INFO] (" << std::time(nullptr) << ") Running with " << num_wf << " wavefront(s) per workgroup and " << num_wg << " workgroup(s)" << std::endl; 
            int wg_sz = num_wf * dev_wf_sz;
            if (wg_sz > dev_max_wg_sz)
            {
@@ -196,7 +198,7 @@ int main(int argc, char *argv[])
                 }
                 else if (operations==M_WMMA)
                 {
-     
+                     if(m_multype==FP16 && m_acctype)   {run_metrics=kernel_launch_wmma_fp16_fp16_161616(num_wf, num_wg, dev_wf_sz);}
                 }
                 else if (operations==M_BLAS)
                 {
@@ -208,7 +210,7 @@ int main(int argc, char *argv[])
     }
 
     // Printing all metrics
-    if (operations==V_ADD || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
+    if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
     {
         std::cout << "Result " << str_operations << " with " << str_v_dtype << std::endl;
     }
