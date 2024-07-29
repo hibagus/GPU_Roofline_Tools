@@ -85,7 +85,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     hipErrchk(hipDeviceSynchronize());
 
     // Calculate launch time
-    hipEventElapsedTime(&gpu_elapsed_time_ms,start,stop);
+    hipErrchk(hipEventElapsedTime(&gpu_elapsed_time_ms,start,stop));
 
     // Processing n_clock
     hipErrchk(hipMemcpy(n_clockCount, dev_n_clockCount, n_wavefront * n_workgroup * sizeof(uint64_t), hipMemcpyDeviceToHost));
@@ -147,11 +147,13 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     run_metrics.min_clock   = min_clock;
     run_metrics.stdev_clock = stdev_clock;
 
-    if      (op == V_MUL)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*NUM_LOOPS;}
-    else if (op == V_FMA1)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute)*NUM_LOOPS;}
-    else if (op == V_ADD)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*NUM_LOOPS;}
-    else if (op == V_ADD2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*NUM_LOOPS;}
-    else if (op == V_FMA2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute)*NUM_LOOPS;}
-    else if (op == V_FMA3)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute)*NUM_LOOPS;}
+    if      (op == V_MUL)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute);}
+    else if (op == V_FMA1)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 1*problem_size*sizeof(TCompute);}
+    else if (op == V_ADD)   {run_metrics.n_flops = (uint64_t) 1*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute);}
+    else if (op == V_ADD2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute);}
+    else if (op == V_FMA2)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 2*problem_size*sizeof(TCompute);}
+    else if (op == V_FMA3)  {run_metrics.n_flops = (uint64_t) 2*problem_size*NUM_LOOPS; run_metrics.n_bytes = (uint64_t) 3*problem_size*sizeof(TCompute);}
+    
+    run_metrics.gflop_per_s = (double) (run_metrics.n_flops / (run_metrics.time_ms*0.001))/1000000000;
     return run_metrics;
 }
