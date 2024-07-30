@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     program.add_argument("--matrix-accum-type")
             .help("Select matrix accumulation data type: fp64, fp32, or int32. This is used for matrix operations on Matrix Cores (MC).")
-            .default_value(std::string("fp16"))
+            .default_value(std::string("fp32"))
             .metavar("m_acctype");
     
 
