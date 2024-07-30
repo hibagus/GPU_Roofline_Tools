@@ -17,7 +17,7 @@ metrics kernel_launch_vector_bf16(uint32_t n_wavefront, uint32_t n_workgroup, ui
 
 metrics kernel_launch_vector_fp16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
 {
-    return kernel_launch_vector<_Float16>(n_wavefront, n_workgroup, dev_wf_sz, op);
+    return kernel_launch_vector<half>(n_wavefront, n_workgroup, dev_wf_sz, op);
 }
 
 metrics kernel_launch_vector_fp32(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz, optype op)
@@ -36,7 +36,7 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     // n_wavefront: number of wavefront (warp) per workgroup (block)
     //              this means number of thread per workgroup will be n_wavefront * dev_wf_sz
     TCompute *dev_buf_A, *dev_buf_B, *dev_buf_C;
-    const TCompute constant = (TCompute) 0.0000000001;
+    const TCompute constant = (TCompute) 0.001;
     uint64_t *n_clockCount, *dev_n_clockCount;
 
     // Calculate problem size (basically number of threads)
