@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
 
     // Matrix Execution
     program.add_argument("--matrix-mult-type")
-            .help("Select matrix multiplication data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
+            .help("Select matrix multiplication data type: fp64, fp32, tf32, fp16, bf16, fp8, bf8, int8, or int32. This is used for matrix operations on Matrix Cores (MC).")
             .default_value(std::string("fp16"))
             .metavar("m_multype");
 
     program.add_argument("--matrix-accum-type")
-            .help("Select matrix accumulation data type: fp64, fp32, fp16, bf16, or int8. This is used for matrix operations on Matrix Cores (MC).")
+            .help("Select matrix accumulation data type: fp64, fp32, or int32. This is used for matrix operations on Matrix Cores (MC).")
             .default_value(std::string("fp16"))
             .metavar("m_acctype");
     
@@ -143,18 +143,20 @@ int main(int argc, char *argv[])
     else if  (str_v_dtype=="bf16"){v_dtype=BF16;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported vector data type!" << std::endl; exit(1);}
 
-    if       (str_m_multype=="fp64"){m_multype=FP64;}
-    else if  (str_m_multype=="fp32"){m_multype=FP32;}
-    else if  (str_m_multype=="fp16"){m_multype=FP16;}
-    else if  (str_m_multype=="bf16"){m_multype=BF16;}
-    else if  (str_m_multype=="int8"){m_multype=INT8;}
+    if       (str_m_multype=="fp64") {m_multype=FP64;}
+    else if  (str_m_multype=="fp32") {m_multype=FP32;}
+    else if  (str_m_multype=="tf32") {m_multype=TF32;}
+    else if  (str_m_multype=="fp16") {m_multype=FP16;}
+    else if  (str_m_multype=="fp8")  {m_multype=FP8;}
+    else if  (str_m_multype=="bf16") {m_multype=BF16;}
+    else if  (str_m_multype=="bf8")  {m_multype=BF8;}
+    else if  (str_m_multype=="int8") {m_multype=INT8;}
+    else if  (str_m_multype=="int32"){m_multype=INT32;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported multiplication matrix data type!" << std::endl; exit(1);}
 
-    if       (str_m_acctype=="fp64"){m_acctype=FP64;}
-    else if  (str_m_acctype=="fp32"){m_acctype=FP32;}
-    else if  (str_m_acctype=="fp16"){m_acctype=FP16;}
-    else if  (str_m_acctype=="bf16"){m_acctype=BF16;}
-    else if  (str_m_acctype=="int8"){m_acctype=INT8;}
+    if       (str_m_acctype=="fp64") {m_acctype=FP64;}
+    else if  (str_m_acctype=="fp32") {m_acctype=FP32;}
+    else if  (str_m_acctype=="int32"){m_acctype=INT32;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported accumulation matrix data type!" << std::endl; exit(1);}
 
     // Operations
@@ -198,7 +200,15 @@ int main(int argc, char *argv[])
                 }
                 else if (operations==M_WMMA)
                 {
-                     if(m_multype==FP16 && m_acctype)   {run_metrics=kernel_launch_wmma_fp16_fp16_161616(num_wf, num_wg, dev_wf_sz);}
+                     if     (m_multype==FP64 && m_acctype==FP64)   {run_metrics=kernel_launch_wmma_f64_16x16x4_f64(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==FP32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x4_f32(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==TF32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x8_xf32(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==FP16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_f16(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==BF16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_bf16(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==FP8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_fp8_fp8(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==BF8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_bf8_bf8(num_wf, num_wg, dev_wf_sz);}
+                     else if(m_multype==INT8 && m_acctype==INT32)  {run_metrics=kernel_launch_wmma_i32_16x16x32_i8(num_wf, num_wg, dev_wf_sz);}
+                     else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
                 }
                 else if (operations==M_BLAS)
                 {
