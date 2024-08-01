@@ -3,6 +3,7 @@
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_vector.hip.h>
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_device_init.hip.h>
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_wmma.hip.h>
+#include <GPU_Roofline_Tools/launcher/rocm/rocblas_launch.hip.h>
 #include <GPU_Roofline_Tools/utils/common/optype.h>
 #include <GPU_Roofline_Tools/utils/common/ptype.h>
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
@@ -44,11 +45,34 @@ int main(int argc, char *argv[])
             .metavar("m_multype");
 
     program.add_argument("--matrix-accum-type")
-            .help("Select matrix accumulation data type: fp64, fp32, or int32. This is used for matrix operations on Matrix Cores (MC).")
+            .help("Select matrix accumulation data type: fp64, fp32, fp16, or int32. This is used for matrix operations on Matrix Cores (MC).")
             .default_value(std::string("fp32"))
             .metavar("m_acctype");
-    
 
+    program.add_argument("--matrix-scale-type")
+            .help("Select matrix accumulation data type: fp64, fp32, fp16, or int32. This is used for matrix operations on Matrix Cores (MC).")
+            .default_value(std::string("fp32"))
+            .metavar("m_scaletype");
+
+    // rocBLAS Execution
+    program.add_argument("--dim-M")
+            .help("M dimension of GEMM for rocBLAS.")
+            .scan<'i', uint64_t>()
+            .default_value(1024UL)
+            .metavar("M_DIM");
+
+   program.add_argument("--dim-K")
+            .help("K dimension of GEMM for rocBLAS.")
+            .scan<'i', uint64_t>()
+            .default_value(1024UL)
+            .metavar("K_DIM");
+
+   program.add_argument("--dim-N")
+            .help("N dimension of GEMM for rocBLAS.")
+            .scan<'i', uint64_t>()
+            .default_value(1024UL)
+            .metavar("N_DIM");
+    
 
     // ================== Wavefront control ================== 
     program.add_argument("--min-wavefront")
@@ -103,9 +127,15 @@ int main(int argc, char *argv[])
     std::string str_operations  = program.get<std::string>("--operations");
 
     // Data Type
-    std::string str_v_dtype   = program.get<std::string>("--vector-data-type");
-    std::string str_m_multype = program.get<std::string>("--matrix-mult-type");
-    std::string str_m_acctype = program.get<std::string>("--matrix-accum-type");
+    std::string str_v_dtype     = program.get<std::string>("--vector-data-type");
+    std::string str_m_multype   = program.get<std::string>("--matrix-mult-type");
+    std::string str_m_acctype   = program.get<std::string>("--matrix-accum-type");
+    std::string str_m_scaletype = program.get<std::string>("--matrix-scale-type");
+
+    // rocBLAS GEMM Dimension
+    uint64_t dim_M = program.get<uint64_t>("--dim-M");
+    uint64_t dim_K = program.get<uint64_t>("--dim-K");
+    uint64_t dim_N = program.get<uint64_t>("--dim-N");
     
     // Workgroup Control
     int min_workgroup  = program.get<int>("--min-workgroup");
@@ -135,6 +165,7 @@ int main(int argc, char *argv[])
     ptype v_dtype;
     ptype m_multype;
     ptype m_acctype;
+    ptype m_scaletype;
 
     // Data Type
     if       (str_v_dtype=="fp64"){v_dtype=FP64;}
@@ -156,8 +187,16 @@ int main(int argc, char *argv[])
 
     if       (str_m_acctype=="fp64") {m_acctype=FP64;}
     else if  (str_m_acctype=="fp32") {m_acctype=FP32;}
+    else if  (str_m_acctype=="fp16") {m_acctype=FP16;}
+    else if  (str_m_acctype=="bf16") {m_acctype=BF16;}
     else if  (str_m_acctype=="int32"){m_acctype=INT32;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported accumulation matrix data type!" << std::endl; exit(1);}
+
+    if       (str_m_scaletype=="fp64") {m_scaletype=FP64;}
+    else if  (str_m_scaletype=="fp32") {m_scaletype=FP32;}
+    else if  (str_m_scaletype=="fp16") {m_scaletype=FP16;}
+    else if  (str_m_scaletype=="int32"){m_scaletype=INT32;}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported scaling matrix data type!" << std::endl; exit(1);}
 
     // Operations
     optype operations;
@@ -175,47 +214,64 @@ int main(int argc, char *argv[])
     std::vector<metrics> all_metrics;
 
     // Workgroup Sweep
-    for (int num_wg=min_workgroup; num_wg<=max_workgroup; num_wg=num_wg+step_workgroup)
+    if(operations==M_BLAS) // with rocBLAS we cannot control wavefront/workgroup
     {
-        // Wavefront Sweep
-        for(int num_wf=min_wavefront; num_wf<=max_wavefront; num_wf=num_wf+step_wavefront)
+        metrics run_metrics;
+        std::cout << "[INFO] (" << std::time(nullptr) << ") Running rocBLAS for GEMM " << dim_M << "x" << dim_N << "x" << dim_K << " size and " << str_m_multype << "/" << str_m_acctype << "/" << str_m_scaletype << " precisions" << std::endl; 
+        if     (m_multype==FP64 && m_acctype==FP64   && m_scaletype==FP64)   {run_metrics=rocblas_launch_fp64_fp64_fp64(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==FP32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==TF32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_tf32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==FP16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP16)   {run_metrics=rocblas_launch_fp16_fp16_fp16(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==BF16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==BF16 && m_acctype==BF16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_bf16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==FP8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==BF8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else if(m_multype==INT8 && m_acctype==INT32  && m_scaletype==INT32)  {run_metrics=rocblas_launch_int8_int32_int32(dim_M, dim_N, dim_K, dev_wf_sz);}
+        else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
+        all_metrics.push_back(run_metrics);
+    }
+    else //Vector Ops and M_WMMA
+    {
+        for (int num_wg=min_workgroup; num_wg<=max_workgroup; num_wg=num_wg+step_workgroup)
         {
-           std::cout << "[INFO] (" << std::time(nullptr) << ") Running with " << num_wf << " wavefront(s) per workgroup and " << num_wg << " workgroup(s)" << std::endl; 
-           int wg_sz = num_wf * dev_wf_sz;
-           if (wg_sz > dev_max_wg_sz)
-           {
-                // Invalid run
-                std::cerr << "[ERR!]: Number of wavefront per workgroup (" << num_wf << ") results in total thread per workgroup exceeding the maximum value. Run will be skipped.\n";
-           }
-           else
-           {
-                metrics run_metrics;
-                // Kernel launch
-                if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
-                {
-                     if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, operations);}
-                     else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, operations);}
-                     else if(v_dtype==FP16){run_metrics=kernel_launch_vector_fp16(num_wf, num_wg, dev_wf_sz, operations);}
-                     else if(v_dtype==BF16){run_metrics=kernel_launch_vector_bf16(num_wf, num_wg, dev_wf_sz, operations);}
-                }
-                else if (operations==M_WMMA)
-                {
-                     if     (m_multype==FP64 && m_acctype==FP64)   {run_metrics=kernel_launch_wmma_f64_16x16x4_f64(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==FP32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x4_f32(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==TF32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x8_xf32(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==FP16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_f16(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==BF16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_bf16(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==FP8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_fp8_fp8(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==BF8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_bf8_bf8(num_wf, num_wg, dev_wf_sz);}
-                     else if(m_multype==INT8 && m_acctype==INT32)  {run_metrics=kernel_launch_wmma_i32_16x16x32_i8(num_wf, num_wg, dev_wf_sz);}
-                     else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
-                }
-                else if (operations==M_BLAS)
-                {
-     
-                }
-                all_metrics.push_back(run_metrics);
-           }
+            // Wavefront Sweep
+            for(int num_wf=min_wavefront; num_wf<=max_wavefront; num_wf=num_wf+step_wavefront)
+            {
+               std::cout << "[INFO] (" << std::time(nullptr) << ") Running with " << num_wf << " wavefront(s) per workgroup and " << num_wg << " workgroup(s)" << std::endl; 
+               int wg_sz = num_wf * dev_wf_sz;
+               if (wg_sz > dev_max_wg_sz)
+               {
+                    // Invalid run
+                    std::cerr << "[ERR!]: Number of wavefront per workgroup (" << num_wf << ") results in total thread per workgroup exceeding the maximum value. Run will be skipped.\n";
+               }
+               else
+               {
+                    metrics run_metrics;
+                    // Kernel launch
+                    if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
+                    {
+                         if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, operations);}
+                         else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, operations);}
+                         else if(v_dtype==FP16){run_metrics=kernel_launch_vector_fp16(num_wf, num_wg, dev_wf_sz, operations);}
+                         else if(v_dtype==BF16){run_metrics=kernel_launch_vector_bf16(num_wf, num_wg, dev_wf_sz, operations);}
+                    }
+                    else if (operations==M_WMMA)
+                    {
+                         if     (m_multype==FP64 && m_acctype==FP64)   {run_metrics=kernel_launch_wmma_f64_16x16x4_f64(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==FP32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x4_f32(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==TF32 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x8_xf32(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==FP16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_f16(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==BF16 && m_acctype==FP32)   {run_metrics=kernel_launch_wmma_f32_16x16x16_bf16(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==FP8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_fp8_fp8(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==BF8 && m_acctype==FP32)    {run_metrics=kernel_launch_wmma_f32_16x16x32_bf8_bf8(num_wf, num_wg, dev_wf_sz);}
+                         else if(m_multype==INT8 && m_acctype==INT32)  {run_metrics=kernel_launch_wmma_i32_16x16x32_i8(num_wf, num_wg, dev_wf_sz);}
+                         else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
+                    }
+                    all_metrics.push_back(run_metrics);
+               }
+            }
         }
     }
 
@@ -230,7 +286,7 @@ int main(int argc, char *argv[])
     }
     else if (operations==M_BLAS)
     {
-        // TODO: Write!!!!!!!!!!
+        std::cout << "Result " << str_operations << " with " << str_m_multype <<"/"<< str_m_acctype<<"/"<< str_m_scaletype << std::endl;
     }
 
     metrics::print_csv_header();
