@@ -11,13 +11,13 @@
 metrics kernel_launch_wmma_f32_16x16x32_fp8_fp8(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz)
 {
     //FP8 compute, FP32 accumulate
-    return kernel_launch_wmma<rocwmma::float8_t,rocwmma::float32_t,16,16,32>(n_wavefront, n_workgroup, dev_wf_sz);
+   return kernel_launch_wmma<rocwmma::float8_fnuz_t,rocwmma::float32_t,16,16,32>(n_wavefront, n_workgroup, dev_wf_sz);
 }
 
 metrics kernel_launch_wmma_f32_16x16x32_bf8_bf8(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz)
 {
     //BF8 compute, FP32 accumulate
-    return kernel_launch_wmma<rocwmma::bfloat8_t,rocwmma::float32_t,16,16,32>(n_wavefront, n_workgroup, dev_wf_sz);
+    return kernel_launch_wmma<rocwmma::bfloat8_fnuz_t,rocwmma::float32_t,16,16,32>(n_wavefront, n_workgroup, dev_wf_sz);
 }
 
 metrics kernel_launch_wmma_f32_16x16x16_f16(uint32_t n_wavefront, uint32_t n_workgroup, uint32_t dev_wf_sz)
