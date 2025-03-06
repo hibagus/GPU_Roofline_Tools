@@ -10,4 +10,4 @@
     --min-workgroup 1 \
     --max-workgroup 304 \
     --step-workgroup 1 \
-    2>&1 | tee ../outputs/run_vmul_fp32_gpuWide.out
+    2>&1 | tee ../outputs/run_vmul_fp32a_gpuWide.out
