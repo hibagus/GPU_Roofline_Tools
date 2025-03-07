@@ -129,7 +129,7 @@ inline metrics rocblas_launch(uint64_t dim_M, uint64_t dim_N, uint64_t dim_K, ui
     // Launching rocBLAS GEMM
     gpu_elapsed_time_ms = 0.0;
     #pragma unroll
-    for(int iter=0; iter < NUM_LOOPS; iter++)
+    for(int iter=0; iter < NUM_LOOPS_BLAS; iter++)
     {
         std::chrono::time_point start=std::chrono::high_resolution_clock::now();
         hipErrchk(rocblas_gemm_ex(handle,                       // rocBLAS handler
@@ -171,7 +171,7 @@ inline metrics rocblas_launch(uint64_t dim_M, uint64_t dim_N, uint64_t dim_K, ui
     hipErrchk(hipFree(dev_buf_C));
 
     // Storing the run metrics
-    run_metrics.n_iter      = NUM_LOOPS;
+    run_metrics.n_iter      = NUM_LOOPS_BLAS;
     run_metrics.n_thread    = 0;
     run_metrics.n_wg        = 0;
     run_metrics.n_wf        = 0;
@@ -184,8 +184,8 @@ inline metrics rocblas_launch(uint64_t dim_M, uint64_t dim_N, uint64_t dim_K, ui
     run_metrics.min_clock   = 0;
     run_metrics.stdev_clock = 0;
 
-    run_metrics.n_flops = (uint64_t) (2 * dim_M * dim_K * dim_N) * NUM_LOOPS;
-    run_metrics.n_bytes = (uint64_t) (2 * (dim_M*dim_K*sizeof(TMul) + dim_N*dim_K*sizeof(TMul) + dim_M*dim_N*sizeof(TAcc)))  * NUM_LOOPS;
+    run_metrics.n_flops = (uint64_t) (2 * dim_M * dim_K * dim_N) * NUM_LOOPS_BLAS;
+    run_metrics.n_bytes = (uint64_t) (2 * (dim_M*dim_K*sizeof(TMul) + dim_N*dim_K*sizeof(TMul) + dim_M*dim_N*sizeof(TAcc)))  * NUM_LOOPS_BLAS;
 
     run_metrics.gflop_per_s = (double) (run_metrics.n_flops / (run_metrics.time_ms*0.001))/1000000000;
 
@@ -235,7 +235,7 @@ inline metrics rocblas_launch_float8_beta(uint64_t dim_M, uint64_t dim_N, uint64
     // Launching rocBLAS GEMM
     gpu_elapsed_time_ms = 0.0;
     #pragma unroll
-    for(int iter=0; iter < NUM_LOOPS; iter++)
+    for(int iter=0; iter < NUM_LOOPS_BLAS; iter++)
     {
         std::chrono::time_point start=std::chrono::high_resolution_clock::now();
         hipErrchk(rocblas_gemm_ex3(handle,                      // rocBLAS handler
@@ -277,7 +277,7 @@ inline metrics rocblas_launch_float8_beta(uint64_t dim_M, uint64_t dim_N, uint64
     hipErrchk(hipFree(dev_buf_C));
 
     // Storing the run metrics
-    run_metrics.n_iter      = NUM_LOOPS;
+    run_metrics.n_iter      = NUM_LOOPS_BLAS;
     run_metrics.n_thread    = 0;
     run_metrics.n_wg        = 0;
     run_metrics.n_wf        = 0;
@@ -290,8 +290,8 @@ inline metrics rocblas_launch_float8_beta(uint64_t dim_M, uint64_t dim_N, uint64
     run_metrics.min_clock   = 0;
     run_metrics.stdev_clock = 0;
 
-    run_metrics.n_flops = (uint64_t) (2 * dim_M * dim_K * dim_N) * NUM_LOOPS;
-    run_metrics.n_bytes = (uint64_t) (2 * (dim_M*dim_K*sizeof(TMul) + dim_N*dim_K*sizeof(TMul) + dim_M*dim_N*sizeof(TAcc)))  * NUM_LOOPS;
+    run_metrics.n_flops = (uint64_t) (2 * dim_M * dim_K * dim_N) * NUM_LOOPS_BLAS;
+    run_metrics.n_bytes = (uint64_t) (2 * (dim_M*dim_K*sizeof(TMul) + dim_N*dim_K*sizeof(TMul) + dim_M*dim_N*sizeof(TAcc)))  * NUM_LOOPS_BLAS;
 
     run_metrics.gflop_per_s = (double) (run_metrics.n_flops / (run_metrics.time_ms*0.001))/1000000000;
 
