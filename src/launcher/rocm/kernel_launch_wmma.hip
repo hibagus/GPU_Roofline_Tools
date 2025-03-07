@@ -132,7 +132,7 @@ inline metrics kernel_launch_wmma(uint32_t n_wavefront, uint32_t n_workgroup, ui
     hipErrchk(hipFree(dev_buf_C));
 
     // Storing the run metrics
-    run_metrics.n_iter      = NUM_LOOPS;
+    run_metrics.n_iter      = NUM_LOOPS_WMMA;
     run_metrics.n_thread    = n_workgroup * n_wavefront * dev_wf_sz;
     run_metrics.n_wg        = n_workgroup;
     run_metrics.n_wf        = n_wavefront;

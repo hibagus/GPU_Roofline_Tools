@@ -38,7 +38,7 @@ __global__ void wmma(TMul *buf_A, TMul *buf_B, TAcc *buf_C, uint64_t *dev_n_cloc
     // Compute
     start_time = clock64();
     #pragma unroll
-    for(int iter=0; iter < NUM_LOOPS; iter++)
+    for(int iter=0; iter < NUM_LOOPS_WMMA; iter++)
     {
         rocwmma::mma_sync(fragment_c, fragment_a, fragment_b, fragment_c);
     }
