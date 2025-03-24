@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ../../bin/amd_mi300x_bench \
-    --device 7 \
+    --device 0 \
     --operations M_WMMA \
     --matrix-mult-type bf8 \
     --matrix-accum-type fp32 \
