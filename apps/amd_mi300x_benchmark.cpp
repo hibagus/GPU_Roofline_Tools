@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
             .default_value(0)
             .metavar("DEVICE");
     program.add_argument("--operations")
-            .help("Select operation types: V_ADD, V_MUL, V_FMA3, V_FMA2, V_FMA1, M_WMMA, M_BLAS")
+            .help("Select operation types: V_ADD1, V_ADD2, V_MUL1, V_MUL2, V_FMA3, V_FMA2, V_FMA1, M_WMMA, M_BLAS")
             .default_value(std::string("V_FMA3"))
             .metavar("ops");
 
@@ -200,9 +200,11 @@ int main(int argc, char *argv[])
 
     // Operations
     optype operations;
-    if       (str_operations=="V_ADD") {operations=V_ADD;}
+    if       (str_operations=="V_ADD1"){operations=V_ADD1;}
+    //else if  (str_operations=="V_ADD1"){operations=V_ADD1;}
     else if  (str_operations=="V_ADD2"){operations=V_ADD2;}
-    else if  (str_operations=="V_MUL") {operations=V_MUL;}
+    else if  (str_operations=="V_MUL1"){operations=V_MUL1;}
+    else if  (str_operations=="V_MUL2"){operations=V_MUL2;}
     else if  (str_operations=="V_FMA3"){operations=V_FMA3;}
     else if  (str_operations=="V_FMA2"){operations=V_FMA2;}
     else if  (str_operations=="V_FMA1"){operations=V_FMA1;}
@@ -250,7 +252,7 @@ int main(int argc, char *argv[])
                {
                     metrics run_metrics;
                     // Kernel launch
-                    if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
+                    if (operations==V_ADD1 || operations==V_ADD2 || operations==V_MUL1 || operations==V_MUL2 || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
                     {
                          if     (v_dtype==FP64){run_metrics=kernel_launch_vector_fp64(num_wf, num_wg, dev_wf_sz, operations);}
                          else if(v_dtype==FP32){run_metrics=kernel_launch_vector_fp32(num_wf, num_wg, dev_wf_sz, operations);}
@@ -276,7 +278,7 @@ int main(int argc, char *argv[])
     }
 
     // Printing all metrics
-    if (operations==V_ADD || operations==V_ADD2 || operations==V_MUL || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
+    if (operations==V_ADD1 || operations==V_ADD2 || operations==V_MUL1 || operations==V_MUL2 || operations==V_FMA3 || operations==V_FMA2 || operations==V_FMA1)
     {
         std::cout << "Result " << str_operations << " with " << str_v_dtype << std::endl;
     }

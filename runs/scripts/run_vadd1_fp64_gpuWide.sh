@@ -2,7 +2,7 @@
 
 ../../bin/amd_mi300x_bench \
     --device 0 \
-    --operations V_ADD \
+    --operations V_ADD1 \
     --vector-data-type fp64 \
     --min-wavefront 16 \
     --max-wavefront 16 \
@@ -10,4 +10,4 @@
     --min-workgroup 304 \
     --max-workgroup 304 \
     --step-workgroup 1 \
-    2>&1 | tee ../outputs/run_vadd_fp64_gpuWide.out
+    2>&1 | tee ../outputs/run_vadd1_fp64_gpuWide.out
