@@ -11,4 +11,4 @@ set_target_properties(${AMD_MI300X_BENCH_EXECUTABLE_NAME}
                         HIP_ARCHITECTURES ${GPU_ARCHITECTURE_SUPPORT}
                         CXX_STANDARD 17)
 target_link_libraries(${AMD_MI300X_BENCH_EXECUTABLE_NAME}
-                      PRIVATE ${PROJECT_AMD_BENCH} external_argparse -lrocblas)
+                      PRIVATE ${PROJECT_AMD_BENCH} external_argparse -lrocblas -lhipblaslt)

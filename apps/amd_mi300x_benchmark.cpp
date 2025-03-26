@@ -4,9 +4,11 @@
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_device_init.hip.h>
 #include <GPU_Roofline_Tools/launcher/rocm/kernel_launch_wmma.hip.h>
 #include <GPU_Roofline_Tools/launcher/rocm/rocblas_launch.hip.h>
+#include <GPU_Roofline_Tools/launcher/rocm/hipblaslt_launch.hip.h>
 #include <GPU_Roofline_Tools/utils/common/optype.h>
 #include <GPU_Roofline_Tools/utils/common/ptype.h>
 #include <GPU_Roofline_Tools/utils/common/metrics.h>
+#include <GPU_Roofline_Tools/utils/common/blaslib.h>
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +33,10 @@ int main(int argc, char *argv[])
             .help("Select operation types: V_ADD1, V_ADD2, V_MUL1, V_MUL2, V_FMA3, V_FMA2, V_FMA1, M_WMMA, M_BLAS")
             .default_value(std::string("V_FMA3"))
             .metavar("ops");
+    program.add_argument("--blas_lib")
+            .help("Select library for BLAS: ROCBLAS, HIPBLASLT")
+            .default_value(std::string("ROCBLAS"))
+            .metavar("blas_lib");
 
     // Vector Execution
     program.add_argument("--vector-data-type")
@@ -54,24 +60,29 @@ int main(int argc, char *argv[])
             .default_value(std::string("fp32"))
             .metavar("m_scaletype");
 
-    // rocBLAS Execution
+    // rocBLAS/hipBLASLt Execution
     program.add_argument("--dim-M")
-            .help("M dimension of GEMM for rocBLAS.")
+            .help("M dimension of GEMM for rocBLAS and hipBLASLt.")
             .scan<'i', uint64_t>()
             .default_value(1024UL)
             .metavar("M_DIM");
 
    program.add_argument("--dim-K")
-            .help("K dimension of GEMM for rocBLAS.")
+            .help("K dimension of GEMM for rocBLAS and hipBLASLt.")
             .scan<'i', uint64_t>()
             .default_value(1024UL)
             .metavar("K_DIM");
 
    program.add_argument("--dim-N")
-            .help("N dimension of GEMM for rocBLAS.")
+            .help("N dimension of GEMM for rocBLAS and hipBLASLt.")
             .scan<'i', uint64_t>()
             .default_value(1024UL)
             .metavar("N_DIM");
+    
+   program.add_argument("--use-workspace")
+            .help("Allocate workspace in device memory for hipBLASLt: true or false.")
+            .default_value(std::string("false"))
+            .metavar("use_workspace");
     
 
     // ================== Wavefront control ================== 
@@ -147,6 +158,10 @@ int main(int argc, char *argv[])
     int max_wavefront  = program.get<int>("--max-wavefront");
     int step_wavefront = program.get<int>("--step-wavefront");
 
+    // BLAS Library
+    std::string str_blas_lib      = program.get<std::string>("--blas_lib"); 
+    std::string str_use_workspace = program.get<std::string>("--use-workspace"); 
+
     // Argument Validation
     // Device Selection
     setHIPDevice(device);
@@ -189,6 +204,8 @@ int main(int argc, char *argv[])
     else if  (str_m_acctype=="fp32") {m_acctype=FP32;}
     else if  (str_m_acctype=="fp16") {m_acctype=FP16;}
     else if  (str_m_acctype=="bf16") {m_acctype=BF16;}
+    else if  (str_m_acctype=="fp8")  {m_acctype=FP8;}
+    else if  (str_m_acctype=="bf8")  {m_acctype=BF8;}
     else if  (str_m_acctype=="int32"){m_acctype=INT32;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported accumulation matrix data type!" << std::endl; exit(1);}
 
@@ -211,7 +228,19 @@ int main(int argc, char *argv[])
     else if  (str_operations=="M_WMMA"){operations=M_WMMA;}
     else if  (str_operations=="M_BLAS"){operations=M_BLAS;}
     else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported operation!" << std::endl; exit(1);}
-    
+
+    // BLAS Library
+    bool use_workspace;
+    blaslib lib;
+
+    if       (str_blas_lib=="ROCBLAS"){lib=ROCBLAS;}
+    else if  (str_blas_lib=="HIPBLASLT"){lib=HIPBLASLT;}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported BLAS Library!" << std::endl; exit(1);}
+
+    if       (str_use_workspace=="true") {use_workspace=true;}
+    else if  (str_use_workspace=="false"){use_workspace=false;}
+    else     {std::cerr <<"[ERR!] Argument parsing error: Unsupported option for hipBLASLt workspace!" << std::endl; exit(1);}
+
     // For storing the run metrics
     std::vector<metrics> all_metrics;
 
@@ -219,19 +248,43 @@ int main(int argc, char *argv[])
     if(operations==M_BLAS) // with rocBLAS we cannot control wavefront/workgroup
     {
         metrics run_metrics;
-        std::cout << "[INFO] (" << std::time(nullptr) << ") Running rocBLAS for GEMM " << dim_M << "x" << dim_N << "x" << dim_K << " size and " << str_m_multype << "/" << str_m_acctype << "/" << str_m_scaletype << " precisions" << std::endl; 
-        if     (m_multype==FP64 && m_acctype==FP64   && m_scaletype==FP64)   {run_metrics=rocblas_launch_fp64_fp64_fp64(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==FP32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==TF32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_tf32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==FP16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP16)   {run_metrics=rocblas_launch_fp16_fp16_fp16(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==BF16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==BF16 && m_acctype==BF16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_bf16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==FP8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==BF8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else if(m_multype==INT8 && m_acctype==INT32  && m_scaletype==INT32)  {run_metrics=rocblas_launch_int8_int32_int32(dim_M, dim_N, dim_K, dev_wf_sz);}
-        else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
+        if(lib==ROCBLAS)
+        {
+            std::cout << "[INFO] (" << std::time(nullptr) << ") Running rocBLAS for GEMM " << dim_M << "x" << dim_N << "x" << dim_K << " size and " << str_m_multype << "/" << str_m_acctype << "/" << str_m_scaletype << " precisions" << std::endl; 
+            if     (m_multype==FP64 && m_acctype==FP64   && m_scaletype==FP64)   {run_metrics=rocblas_launch_fp64_fp64_fp64(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==FP32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==TF32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_tf32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==FP16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp16_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP16)   {run_metrics=rocblas_launch_fp16_fp16_fp16(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==BF16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==BF16 && m_acctype==BF16   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf16_bf16_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            //else if(m_multype==FP8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_fp8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            //else if(m_multype==BF8  && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=rocblas_launch_bf8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else if(m_multype==INT8 && m_acctype==INT32  && m_scaletype==INT32)  {run_metrics=rocblas_launch_int8_int32_int32(dim_M, dim_N, dim_K, dev_wf_sz);}
+            else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
+        }
+        else if (lib==HIPBLASLT)
+        {
+             std::cout << "[INFO] (" << std::time(nullptr) << ") Running hipBLASLt for GEMM " << dim_M << "x" << dim_N << "x" << dim_K << " size and " << str_m_multype << "/" << str_m_acctype << "/" << str_m_scaletype << " precisions" << std::endl; 
+             if     (m_multype==FP64 && m_acctype==FP64   && m_scaletype==FP64)   {run_metrics=hipblaslt_launch_fp64_fp64_fp64(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==TF32 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_tf32_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==BF16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_bf16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==BF16 && m_acctype==BF16   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_bf16_bf16_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP16 && m_acctype==FP32   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp16_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp16_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP16 && m_acctype==FP16   && m_scaletype==FP16)   {run_metrics=hipblaslt_launch_fp16_fp16_fp16(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==BF8 && m_acctype==BF8     && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_bf8_bf8_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==BF8 && m_acctype==FP16    && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_bf8_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==BF8 && m_acctype==FP32    && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_bf8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP8 && m_acctype==FP8     && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp8_fp8_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP8 && m_acctype==FP16    && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp8_fp16_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==FP8 && m_acctype==FP32    && m_scaletype==FP32)   {run_metrics=hipblaslt_launch_fp8_fp32_fp32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else if(m_multype==INT8 && m_acctype==INT32  && m_scaletype==INT32)  {run_metrics=hipblaslt_launch_int8_int32_int32(dim_M, dim_N, dim_K, dev_wf_sz, use_workspace);}
+             else {std::cerr <<"[ERR!] Unsupported multiply/accumulation data type combinations!" << std::endl; exit(1);}
+        }
+
         all_metrics.push_back(run_metrics);
     }
     else //Vector Ops and M_WMMA
