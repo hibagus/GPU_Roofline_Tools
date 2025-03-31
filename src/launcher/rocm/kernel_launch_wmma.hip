@@ -145,7 +145,7 @@ inline metrics kernel_launch_wmma(uint32_t n_wavefront, uint32_t n_workgroup, ui
     run_metrics.min_clock   = min_clock;
     run_metrics.stdev_clock = stdev_clock;
 
-    run_metrics.n_flops = (uint64_t) (2 * WMMA_M * WMMA_K * WMMA_N) * n_wavefront * n_workgroup * NUM_LOOPS;
+    run_metrics.n_flops = (uint64_t) (2 * WMMA_M * WMMA_K * WMMA_N) * n_wavefront * n_workgroup * NUM_LOOPS_WMMA;
     run_metrics.n_bytes = (uint64_t) (2 * (WMMA_M*WMMA_K*sizeof(TMul) + WMMA_N*WMMA_K*sizeof(TMul) + WMMA_M*WMMA_N*sizeof(TAcc))) * n_wavefront * n_workgroup;
 
     run_metrics.gflop_per_s = (double) (run_metrics.n_flops / (run_metrics.time_ms*0.001))/1000000000;
