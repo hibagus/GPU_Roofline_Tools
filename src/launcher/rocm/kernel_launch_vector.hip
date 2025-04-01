@@ -36,7 +36,8 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
     // n_wavefront: number of wavefront (warp) per workgroup (block)
     //              this means number of thread per workgroup will be n_wavefront * dev_wf_sz
     TCompute *dev_buf_A, *dev_buf_B, *dev_buf_C;
-    const TCompute constant = (TCompute) 0.000;
+    const TCompute constant1 = (TCompute) 0.000;
+    const TCompute constant2 = (TCompute) 0.000;
     uint64_t *n_clockCount, *dev_n_clockCount;
 
     // Calculate problem size (basically number of threads)
@@ -75,13 +76,13 @@ inline metrics kernel_launch_vector(uint32_t n_wavefront, uint32_t n_workgroup, 
 
     // Launching Kernels
     hipErrchk(hipEventRecord(start,0));
-    if      (op == V_MUL1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(mul<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_ADD1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_FMA1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_n_clockCount, dev_wf_sz);}
+    if      (op == V_MUL1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(mul<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant1, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_ADD1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant1, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_FMA1)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant1, constant2, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_ADD2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_MUL2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(mul<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
     //else if (op == V_ADD2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(add<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, dev_n_clockCount, dev_wf_sz);}
-    else if (op == V_FMA2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
+    else if (op == V_FMA2)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, constant1, dev_buf_B, dev_n_clockCount, dev_wf_sz);}
     else if (op == V_FMA3)  {hipLaunchKernelGGL(HIP_KERNEL_NAME(fma<TCompute>), dim3(n_workgroup), dim3(n_wavefront * dev_wf_sz), 0, 0,  dev_buf_A, dev_buf_B, dev_buf_C, dev_n_clockCount, dev_wf_sz);}
     hipErrchk(hipEventRecord(stop,0));
     hipErrchk(hipDeviceSynchronize());
