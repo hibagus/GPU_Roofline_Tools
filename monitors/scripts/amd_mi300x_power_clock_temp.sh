@@ -8,7 +8,7 @@ if [ $# -lt 3 ]
 fi
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-OUTPUT_PATH="../outputs/"
+OUTPUT_PATH="./outputs_smi/"
 mkdir -p $OUTPUT_PATH
 FILE_PATH="${OUTPUT_PATH}/${TIMESTAMP}_${3}.csv"
 
