@@ -1,1 +1,1 @@
-../../bin/amd_mi300x_bench_128 --device $1 --operations M_BLAS --matrix-mult-type $2 --matrix-accum-type $3 --matrix-scale-type $4 --dim-M $5 --dim-N $6 --dim-K $7 2>&1 | tee ../outputs/$8.out
+../../bin/amd_mi300x_bench_128 --device $1 --blas_lib $2 --operations M_BLAS --matrix-mult-type $3 --matrix-accum-type $4 --matrix-scale-type $5 --dim-M $6 --dim-N $7 --dim-K $8 2>&1 | tee ../outputs/$9.out
